@@ -23,4 +23,4 @@ If you get errors here let me know.
  
  - `python tweets.py --user SportsAviation --consumer_key abc --consumer_secret def --access_token_key ghi --access_token_secret jkl`
  
- You should see some progress printouts and the spreadsheet saved as `SportsAviation.xlsx` in `Documents/Tweets`
+ You should see some progress printouts and the spreadsheet saved as `SportsAviation.xlsx` in `Documents/twitter-master`
