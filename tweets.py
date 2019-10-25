@@ -43,8 +43,8 @@ def get_all_tweets(screen_name, keys):
     tweet_jsons = [tweet._json for tweet in alltweets]
 
     # Save jsons
-    with open(f'{screen_name}_tweets.pkl', 'wb') as fp:
-        pickle.dump(tweet_jsons, fp)
+    # with open(f'{screen_name}_tweets.pkl', 'wb') as fp:
+    #     pickle.dump(tweet_jsons, fp)
 
     # Get team as first user mention
     user_mentions, team_names = [], []
