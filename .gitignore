@@ -1,0 +1,7 @@
+*.pkl
+*.xlsx
+*.xlsx#
+*.ipynb
+*.iml
+*.xml
+*.idea/
