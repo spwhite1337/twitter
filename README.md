@@ -2,13 +2,12 @@
 
 To get the tweets you need to follow these steps
 
-- I would recommend putting this in its own folder. For example, make a folder called `Tweets` in your `Documents` folder.
-
-- Download `tweets.py` and `requirements.txt` files into some folder. I'll assume it is in `Documents/Tweets/` for now. 
+- In the top right of this page, click the green `Clone or Download` button, click `Download Zip`. 
+I'll assume it is in your `Downloads` folder for now.
 
 - Open the terminal (spotlight search with `CMD + Space` and type `terminal`, hit enter)
 
-- type `cd ~/Documents/Tweets`, hit Enter
+- type `cd ~/Downloads/twitter-master`, hit Enter
     -- (if you save it into another folder, you need to type `cd ~/filepath` 
     where `filepath` is the path to the folder)
     
