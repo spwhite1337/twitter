@@ -13,7 +13,7 @@ class ETL(object):
     Pull data from Twitter
     """
     twitter_dev_env = 'marcus'
-    min_date = pd.Timestamp('2019-01-01')
+    min_date = pd.Timestamp('2018-01-01')
     max_tweets = 100000
 
     def __init__(self, screen_name: str, overwrite: bool = False):
@@ -38,19 +38,21 @@ class ETL(object):
         while to_date > self.min_date and len(tweets) < self.max_tweets:
             # Iterate over 500 tweet batches
             tweet_times = []
-            for status in tqdm(tweepy.Cursor(
+            for status in tweepy.Cursor(
                     self.api.search_full_archive,
                     label=self.twitter_dev_env,
                     query='from:{}'.format(self.screen_name),
                     toDate=to_date.strftime('%Y%m%d%H%M'),
                     maxResults=500
-            ).items()):
+            ).items():
                 tweets.append(status._json)
                 tweet_times.append(pd.Timestamp(status._json['created_at']).tz_localize(None))
             if len(tweet_times) == 0:
                 to_date = self.min_date
+                logger.info('No Tweets left')
             else:
                 to_date = min(tweet_times)
+            logger.info('{} Total Tweets back to {}'.format(len(tweets), to_date))
 
         logger.info('Saving Raw Tweets')
         with open(os.path.join(self.save_dir, 'raw_tweets.json'), 'w') as jp:
