@@ -2,45 +2,42 @@ import tweepy
 import pickle
 import argparse
 import pandas as pd
+from typing import List, Dict, Tuple, Any
 
 
-def get_all_tweets(screen_name, keys):
+def get_all_tweets(screen_name: str, keys: Dict[str, str]):
     # Twitter only allows access to a users most recent 3240 tweets with this method
     # authorize twitter, initialize tweepy
     auth = tweepy.OAuthHandler(keys['consumer_key'], keys['consumer_secret'])
     auth.set_access_token(keys['access_token_key'], keys['access_token_secret'])
     api = tweepy.API(auth)
-    # initialize a list to hold all the tweepy Tweets
-    alltweets = []
+
     # make initial request for most recent tweets (200 is the maximum allowed count)
     new_tweets = api.user_timeline(screen_name=screen_name, count=200, tweet_mode='extended')
-    # save most recent tweets
-    alltweets.extend(new_tweets)
-    # save the id of the oldest tweet less one
+    alltweets = new_tweets
+    # Iteratively grab tweets until you get nothing back
     oldest = alltweets[-1].id - 1
-    # keep grabbing tweets until there are no tweets left to grab
     while len(new_tweets) > 0:
-        print(f"getting tweets before {oldest}")
-        # all subsequent requests use the max_id param to prevent duplicates
         new_tweets = api.user_timeline(screen_name=screen_name, count=200, max_id=oldest, tweet_mode='extended')
-        # save most recent tweets
         alltweets.extend(new_tweets)
-        # update the id of the oldest tweet less one
         oldest = alltweets[-1].id - 1
         print(f"...{len(alltweets)} tweets downloaded so far")
 
     # Convert to list of Jsons
-    tweet_jsons = [tweet._json for tweet in alltweets]
-    # Get team as first user mention, team-name as name of twitter account for first user-mention
-    user_mentions, team_names = [], []
-    for tweet in tweet_jsons:
-        mentions = tweet.get('entities', []).get('user_mentions', [])
-        if len(mentions) > 0:
-            user_mentions.append(mentions[0].get('screen_name', 'None'))
-            team_names.append(mentions[0].get('name', 'None'))
-        else:
-            user_mentions.append('None')
-            team_names.append('None')
+    TWEETS = [tweet._json for tweet in alltweets]
+
+    def get_user_names(tweets: List[Dict[Any, Any]]) -> Tuple[List[str], List[str]]:
+        user_mentions_, team_names_ = [], []
+        for tweet in tweets:
+            mentions = tweet.get('entities', {}).get('user_mentions', [])
+            if len(mentions) > 0:
+                user_mentions_.append(mentions[0].get('screen_name', 'None'))
+                team_names_.append(mentions[0].get('name', 'None'))
+            else:
+                user_mentions_.append('None')
+                team_names_.append('None')
+        return user_mentions_, team_names_
+    user_mentions, team_names = get_user_names(TWEETS)
 
     def get_tail_number(tweet: str) -> str:
         flight_info = tweet.split('\n')
@@ -107,7 +104,7 @@ def get_all_tweets(screen_name, keys):
 
     # Get first link for flightware
     flightware_links = []
-    for tweet in tweet_jsons:
+    for tweet in TWEETS:
         urls = tweet.get('entities', []).get('urls', [])
         if len(urls) > 0:
             flightware_links.append(urls[0].get('url', 'None'))
@@ -116,9 +113,9 @@ def get_all_tweets(screen_name, keys):
 
     # Save as xlsx
     df = pd.DataFrame()
-    df['created_at'] = [tweet['created_at'] for tweet in tweet_jsons]
+    df['created_at'] = [tweet['created_at'] for tweet in TWEETS]
     df['tweet_date'] = pd.to_datetime(df['created_at']).dt.date
-    df['text'] = [tweet['full_text'] for tweet in tweet_jsons]
+    df['text'] = [tweet['full_text'] for tweet in TWEETS]
     df['first_user_mention'] = user_mentions
     df['team_name'] = team_names
 
@@ -131,8 +128,8 @@ def get_all_tweets(screen_name, keys):
     df['arrival_time'] = df['text'].apply(get_arrival_time)
 
     df['flightware_links'] = flightware_links
-    df['retweets'] = [tweet['retweet_count'] for tweet in tweet_jsons]
-    df['favorite_count'] = [tweet['favorite_count'] for tweet in tweet_jsons]
+    df['retweets'] = [tweet['retweet_count'] for tweet in TWEETS]
+    df['favorite_count'] = [tweet['favorite_count'] for tweet in TWEETS]
 
     # Save to excel
     df = df[df['aircraft_type'] != 'None']
