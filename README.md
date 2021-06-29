@@ -1,3 +1,18 @@
+
+# Requirements
+
+- Python 3.6
+- Developer Credentials fro Twitter
+
+
+# Procedure
+
+- `consumer_key=API KEY from twitter`
+- `consumer_secret=API Secret Key from twitter`
+- `access_token_key=Access Token from twitter`
+- `access_token_secret=Access Token Secret from twitter`
+
+
 # Marcus
 
 To get the tweets you need to follow these steps
