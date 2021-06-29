@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Get root dir
-ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+ROOT_DIR = os.getcwd()
 
 
 class Config(object):
