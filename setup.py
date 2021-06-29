@@ -7,6 +7,9 @@ setup(
     author='Scott P. White',
     author_email='spwhite1337@gmail.com',
     packages=find_packages(),
+    entry_points={'console_scripts': [
+        'tw_pull = twitter.tweets:twitter_pull'
+    ]},
     install_requires=[
         'pandas',
         'numpy',

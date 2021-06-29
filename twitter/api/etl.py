@@ -9,7 +9,7 @@ from tqdm import tqdm
 from twitter.config import Config, logger
 
 
-class TwitterPull(object):
+class ETL(object):
     """
     Pull data from Twitter
     """
