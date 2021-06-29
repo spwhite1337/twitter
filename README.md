@@ -7,6 +7,7 @@
 
 # Procedure
 
+- `pip install -e .`
 - `consumer_key=API KEY from twitter`
 - `consumer_secret=API Secret Key from twitter`
 - `access_token_key=Access Token from twitter`

@@ -13,8 +13,10 @@ setup(
     install_requires=[
         'pandas',
         'numpy',
-        'tweepy',
         'openpyxl',
-        'tqdm'
+        'tqdm',
+        # 'tweepy',
+        # Install tweepy from git to get premium api access
+        'tweepy @ git+https://github.com/tweepy/tweepy@master',
     ],
 )
