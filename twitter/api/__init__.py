@@ -1,1 +1,1 @@
-from twitter.api.parser import Parser as TwitterPull
+from twitter.api.diagnostics import Diagnostics as TwitterPull

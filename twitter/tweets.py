@@ -14,3 +14,4 @@ def twitter_pull():
     tweets = api.etl(to_date=args.to_date)
     df = api.parse_raw_tweets(tweets)
     api.save_parsed(df)
+    api.diagnostics(df)

@@ -4,6 +4,8 @@ import tweepy
 import datetime
 import pandas as pd
 from typing import List, Dict, Optional
+
+
 from twitter.config import Config, logger
 
 
@@ -15,6 +17,7 @@ class ETL(object):
     twitter_dev_env = 'marcus'
     min_date = pd.Timestamp('2018-01-01')
     max_tweets = 100000
+    figsize = (12, 12)
 
     def __init__(self, screen_name: str, overwrite: bool = False):
         self.screen_name = screen_name
@@ -78,7 +81,8 @@ class ETL(object):
         Save parsed tweets
         """
         logger.info('Saving Parsed Tweets')
-        df_nones, df = df[df['aircraft_type'] == 'None'], df[df['aircraft_type'] != 'None']
+        df_nones = df[(df['team_names'] == 'None') | (df['departure'] == 'None') | (df['arrival'] == 'None')]
+        df = df[(df['team_names'] != 'None') & (df['departure'] != 'None') & (df['arrival'] != 'None')]
         df_nones.to_csv(os.path.join(self.save_dir, 'nones_{}.csv'.format(self.version)), index=False)
         df.to_csv(os.path.join(self.save_dir, 'parsed_tweets_{}.csv'.format(self.version)), index=False)
         df.to_excel(os.path.join(self.save_dir, 'parsed_tweets_{}.xlsx'.format(self.version)), index=False)
