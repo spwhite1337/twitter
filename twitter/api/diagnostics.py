@@ -17,6 +17,7 @@ class Diagnostics(Parser):
         Quick plots of the results
         """
         df['year'] = df['created_at'].dt.year
+        df = df[df['team_name'] != 'None']
 
         logger.info('Diagnostics for Parsing')
         with PdfPages(os.path.join(self.save_dir, 'diagnostics.pdf')) as pdf:

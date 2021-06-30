@@ -317,7 +317,5 @@ class Parser(ETL):
             'tail_no',
             'departure',
             'arrival',
-            'departure_time',
-            'arrival_time'
         ]].isna().any(axis=1)
         return df
