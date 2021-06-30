@@ -70,18 +70,17 @@ class Parser(ETL):
     @staticmethod
     def _is_airport_format(version: str, tweet_line: str) -> bool:
         if version == 'v1':
-            tweet_line_parts = tweet_line.split('-')
+            tweet_line_parts = [t.strip() for t in tweet_line.split('-')]
             # Should have two parts
             split_by_dash = len(tweet_line_parts) == 2
             if not split_by_dash:
                 return split_by_dash
 
             # First part is airport code
-            airport_code = tweet_line_parts[0].strip()
-            is_airport_code = bool(re.match(r'[A-Z]{3}', airport_code))
+            airport_code = tweet_line_parts[0]
+            is_airport_code = bool(re.match('[A-Z]{3}', airport_code))
             # Second part is a time
-            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}[a,p]m [A-Z]{2}', tweet_line_parts[1].strip())
-
+            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}\s[ap]m [A-Z]{2}', tweet_line_parts[1])
             return is_airport_code and is_time
         else:
             return False
