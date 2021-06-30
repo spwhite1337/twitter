@@ -16,7 +16,6 @@ setup(
         'openpyxl',
         'tqdm',
         'matplotlib',
-        'emoji',
         # Install tweepy from git to get premium api access
         # 'tweepy',
         'tweepy @ git+https://github.com/tweepy/tweepy@master',
