@@ -1,5 +1,6 @@
 import re
 from typing import List, Dict, Any, Tuple, Optional
+from tqdm import tqdm
 import pandas as pd
 
 from twitter.config import logger
@@ -86,12 +87,82 @@ class Parser(ETL):
             return False
 
     @staticmethod
-    def _airport_format(version: str, tweet_line: str) -> Dict[str, str]:
+    def _airport_format(version: str, ldx: int, tweet_line: str) -> Dict[str, str]:
         if version == 'v1':
-            tweet_line_parts = tweet_line.split('-')
+            tweet_line_parts = [t.strip() for t in tweet_line.split('-')]
             return {
-                'airport_code': tweet_line_parts[0].strip(),
-                'airport_time': tweet_line_parts[1].strip()
+                '{}_airport_code'.format(ldx): tweet_line_parts[0],
+                '{}_airport_time'.format(ldx): tweet_line_parts[1]
+            }
+        else:
+            return {}
+
+    @staticmethod
+    def _is_aircraft_format(version: str, tweet_line: str) -> bool:
+        if version == 'v1':
+            tweet_line_parts = [t.strip() for t in tweet_line.split('|')]
+            # Should have two or 3 parts
+            split_by_pipe = len(tweet_line_parts) in [2, 3]
+            if not split_by_pipe:
+                return split_by_pipe
+
+            # No line part should be more than 7 characters or less than 2
+            for tweet_line_part in tweet_line_parts:
+                if len(tweet_line_part) > 7 or len(tweet_line_part) < 2:
+                    return False
+            return True
+
+    @staticmethod
+    def _aircraft_format(version: str, tweet_line: str) -> Dict[str, str]:
+        if version == 'v1':
+            tweet_line_parts = [t.strip() for t in tweet_line.split('|')]
+            tail_no, routing_no, aircraft_type = None, None, None
+            for tweet_line_part in tweet_line_parts:
+                # If it starts with N and has at least one number, and more than 3 characters it is a tail_no
+                # https://en.wikipedia.org/wiki/Aircraft_registration
+                if tweet_line_part.startswith('N') and \
+                        re.match('.*\d.*', tweet_line_part) and \
+                        len(tweet_line_part) > 3:
+                    tail_no = tweet_line_part
+                    continue
+
+                # If it starts with a capital letter, has 2, 3, or 4 characters -> Then it is an aircraft-type
+                # https://en.wikipedia.org/wiki/List_of_aircraft_type_designators
+                elif re.match('^[A-Z]', tweet_line_part) and len(tweet_line_part) in [2, 3, 4]:
+                    aircraft_type = tweet_line_part
+                    continue
+
+                # If it starts with 2 or 3 Capital letters then 1-4 digits then it is a routing number
+                elif re.match('^[A-Z]{2,3}[0-9]{1,4}', tweet_line_part):
+                    routing_no = tweet_line_part
+                    continue
+
+            return {
+                'tail_no': tail_no,
+                'aircraft_type': aircraft_type,
+                'routing_no': routing_no
+            }
+        else:
+            return {}
+
+    @staticmethod
+    def _is_layover_format(version: str, tweet_line: str) -> bool:
+        if version == 'v1':
+            # If the pipe operate splits it into two and the first part is split into two by a dash then it is a layover
+            if len(tweet_line.split('|')) == 2 and len(tweet_line.split('|')[0].split('-')) == 2:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    @staticmethod
+    def _layover_format(version: str, tweet_line: str) -> Dict[str, str]:
+        if version == 'v1':
+            tweet_line_parts = [t.strip() for t in tweet_line.split('|')[0].split('-')]
+            return {
+                'layover': tweet_line_parts[0],
+                'layover_time': tweet_line_parts[1]
             }
         else:
             return {}
@@ -102,109 +173,26 @@ class Parser(ETL):
         """
         result = {}
         if version == 'v1':
+            # Strip emojis
+            tweet = '\n'.join([self.remove_emojis(tweet_line) for tweet_line in tweet.split('\n')])
             # iterate over the lines in the tweet
-            for tweet_line in tweet.split('\n'):
-                # Strip emojis
-                tweet_line = self.remove_emojis(tweet_line)
+            for ldx, tweet_line in enumerate(tweet.split('\n')):
+                # Check for a layover line
+                if self._is_layover_format(version, tweet_line):
+                    result.update(self._layover_format(version, tweet_line))
+                    continue
 
-                # Add airport information
+                # Airport code + arrival / layover / departure time
                 if self._is_airport_format(version, tweet_line):
-                    result.update(self._airport_format(version, tweet_line))
+                    result.update(self._airport_format(version, ldx, tweet_line))
+                    continue
+
+                # Aircraft line for routing_no, aircraft_type, and tail_no
+                if self._is_aircraft_format(version, tweet_line):
+                    result.update(self._aircraft_format(version, tweet_line))
+                    continue
 
         return result
-
-    @staticmethod
-    def _parse_for_tail_number(version: str, tweet: str) -> str:
-        if version == 'v1':
-            # Read lines
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 5:
-                # Get 4th line up
-                flight_info = flight_info[-4][1:]  # Drop emoji in front
-                flight_info = flight_info.split('|')
-                if len(flight_info) >= 1:
-                    return flight_info[0].strip()[1:].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_flight_no(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 5:
-                flight_info = flight_info[-4][1:]  # Drop emoji in front
-                flight_info = flight_info.split('|')
-                if len(flight_info) >= 3:
-                    return flight_info[1].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_aircraft_type(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 5:
-                flight_info = flight_info[-4][1:]  # Drop emoji in front
-                flight_info = flight_info.split('|')
-                if len(flight_info) >= 3:
-                    return flight_info[2].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_departure(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 3:
-                flight_info = flight_info[-3][1:]  # Drop emoji in front
-                flight_info = flight_info.split(' - ')
-                if len(flight_info) >= 1:
-                    return flight_info[0].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_departure_time(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 3:
-                flight_info = flight_info[-3][1:]  # Drop emoji in front
-                flight_info = flight_info.split(' - ')
-                if len(flight_info) >= 2:
-                    return flight_info[1].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_arrival(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 3:
-                flight_info = flight_info[-2][1:]  # Drop emoji in front
-                flight_info = flight_info.split(' - ')
-                if len(flight_info) >= 1:
-                    return flight_info[0].strip()
-            return 'None'
-        else:
-            return 'None'
-
-    @staticmethod
-    def _parse_for_arrival_time(version: str, tweet: str) -> str:
-        if version == 'v1':
-            flight_info = tweet.split('\n')
-            if len(flight_info) >= 3:
-                flight_info = flight_info[-2][1:]  # Drop emoji in front
-                flight_info = flight_info.split(' - ')
-                if len(flight_info) >= 2:
-                    return flight_info[1].strip()
-            return 'None'
-        else:
-            return 'None'
 
     def parse_raw_tweets(self, tweets: Optional[List[Dict[str, Any]]] = None) -> pd.DataFrame:
         """
@@ -225,41 +213,34 @@ class Parser(ETL):
             'favorite_count': [tweet['favorite_count'] for tweet in tweets],
             'is_reply': [tweet['in_reply_to_user_id'] is not None for tweet in tweets],
             'is_quote_status': [tweet['is_quote_status'] for tweet in tweets],
-        })
+        }).drop_duplicates()
 
         # Define parsing versions
+        df['tweet_date'] = df['created_at'].dt.date
         df['p_version'] = df['created_at'].apply(self._parsing_versions)
 
         # Parse data from tweet
         df['is_retweet'] = df['tweet'].apply(lambda t: t.startswith('RT @'))
-        df['tail_number'] = df.apply(lambda r: self._parse_for_tail_number(r['p_version'], r['tweet']), axis=1)
-        df['flight_no'] = df.apply(lambda r: self._parse_for_flight_no(r['p_version'], r['tweet']), axis=1)
-        df['aircraft_type'] = df.apply(lambda r: self._parse_for_aircraft_type(r['p_version'], r['tweet']), axis=1)
-        df['departure'] = df.apply(lambda r: self._parse_for_departure(r['p_version'], r['tweet']), axis=1)
-        df['departure_time'] = df.apply(lambda r: self._parse_for_departure_time(r['p_version'], r['tweet']), axis=1)
-        df['arrival'] = df.apply(lambda r: self._parse_for_arrival(r['p_version'], r['tweet']), axis=1)
-        df['arrival_time'] = df.apply(lambda r: self._parse_for_arrival_time(r['p_version'], r['tweet']), axis=1)
 
-        df['parsed'] = (
-            df['tail_number'] != 'None'
-        ) & (
-            df['flight_no'] != 'None'
-        ) & (
-            df['aircraft_type'] != 'None'
-        ) & (
-            df['departure'] != 'None'
-        ) & (
-            df['departure_time'] != 'None'
-        ) & (
-            df['arrival'] != 'None'
-        ) & (
-            df['arrival_time'] != 'None'
-        ) & (
-            ~df['is_reply']
-        ) & (
-            ~df['is_quote_status']
-        ) & (
-            ~df['is_retweet']
-        )
+        # Filter for only posts
+        df_posts = df[~df['is_reply'] & ~df['is_quote_status'] & ~df['is_retweet']]
 
-        return df.drop_duplicates().reset_index(drop=True)
+        # Iterate over versions / tweets
+        records = []
+        for p_version, df_ in df_posts.groupby('p_version'):
+            logger.info('Parsing {}'.format(p_version))
+            for _, row in tqdm(df_.iterrows(), total=df_.shape[0]):
+                record = {
+                    'created_at': row['created_at'],
+                    'tweet_date': row['tweet_date'],
+                    'tweet': row['tweet'],
+                    'user_mentions': row['user_mentions'],
+                    'team_names': row['team_names'],
+                    'flightware_links': row['flightware_links'],
+                    'p_version': p_version
+                }
+                results = self._parse_tweet(p_version, row['tweet'])
+                record.update(results)
+                records.append(record)
+        df = pd.DataFrame.from_records(records).drop_duplicates().reset_index(drop=True)
+        return df
