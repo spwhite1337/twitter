@@ -42,7 +42,7 @@ class ETL(object):
 
         logger.info('Pulling Tweets for {}'.format(self.screen_name))
         tweets = []
-        to_date = pd.Timestamp(datetime.datetime.now()) if to_date is None else to_date
+        to_date = pd.Timestamp(datetime.datetime.now()) if to_date is None else pd.Timestamp(to_date)
         while to_date > self.min_date and len(tweets) < self.max_tweets:
             # Iterate over 500 tweet batches
             tweet_times = []
