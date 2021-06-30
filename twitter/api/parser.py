@@ -171,12 +171,12 @@ class Parser(ETL):
             return False
 
     @staticmethod
-    def _layover_format(version: str, tweet_line: str) -> Dict[str, str]:
+    def _layover_format(version: str, ldx: int, tweet_line: str) -> Dict[str, str]:
         if version == 'v1':
             tweet_line_parts = [t.strip() for t in tweet_line.split('|')[0].split('-')]
             return {
-                'layover': tweet_line_parts[0],
-                'layover_time': tweet_line_parts[1]
+                '{}_airport_code'.format(ldx): tweet_line_parts[0],
+                '{}_airport_time'.format(ldx): tweet_line_parts[1]
             }
         else:
             return {}
@@ -193,7 +193,7 @@ class Parser(ETL):
             for ldx, tweet_line in enumerate(tweet.split('\n')):
                 # Check for a layover line
                 if self._is_layover_format(version, tweet_line):
-                    result.update(self._layover_format(version, tweet_line))
+                    result.update(self._layover_format(version, ldx, tweet_line))
                     continue
 
                 # Airport code + arrival / layover / departure time
@@ -216,6 +216,11 @@ class Parser(ETL):
                 result['departure_time'] = result[str(min_code) + '_airport_time']
                 result['arrival'] = result[str(max_code) + '_airport_code']
                 result['arrival_time'] = result[str(max_code) + '_airport_time']
+
+                # Add a layover if there are 3 entries for airport-codes / times
+                if max_code - min_code == 3:
+                    result['layover'] = result['{}_airport_code'.format(max_code - 1)]
+                    result['layover_time'] = result['{}_airport_time'.format(max_code - 1)]
 
                 # Drop intermediate codes
                 drops = []
