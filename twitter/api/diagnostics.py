@@ -28,7 +28,9 @@ class Diagnostics(Parser):
             df_plot = df.groupby('dt').agg(num_tweets=('tweet', 'nunique'), parsed=('parsed', 'max')).reset_index()
             for parsed, df_plot_ in df_plot.groupby('parsed'):
                 df_plot_ = df_plot_.sort_values('dt').reset_index(drop=True)
-                plt.plot(df_plot_['dt'], df_plot_['num_tweets'], label='Parsed: {}'.format(parsed), alpha=0.5)
+                plt.plot(
+                    df_plot_['dt'], df_plot_['num_tweets'], label='Parsed: {}'.format(parsed), marker='o', alpha=0.5
+                )
             plt.grid(True)
             plt.legend()
             plt.ylabel('Number of Tweets')
