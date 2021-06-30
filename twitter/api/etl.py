@@ -15,18 +15,17 @@ class ETL(object):
     """
     version = 'v1'
     twitter_dev_env = 'marcus'
-    min_date = pd.Timestamp('2018-01-01')
+    min_date = pd.Timestamp('2017-01-01')
     max_tweets = 100000
     figsize = (12, 12)
 
-    def __init__(self, screen_name: str, overwrite: bool = False):
+    def __init__(self, screen_name: str):
         self.screen_name = screen_name
         auth = tweepy.OAuthHandler(os.environ['consumer_key'], os.environ['consumer_secret'])
         auth.set_access_token(os.environ['access_token_key'], os.environ['access_token_secret'])
         self.api = tweepy.API(auth)
         if not self.api.verify_credentials():
             logger.info('Could not Validate Credentials')
-        self.overwrite = overwrite
         self.save_dir = os.path.join(Config.DATA_DIR, self.screen_name)
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)

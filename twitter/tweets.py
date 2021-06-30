@@ -10,8 +10,8 @@ def twitter_pull():
     parser.add_argument('--overwrite', action='store_true')
     args = parser.parse_args()
 
-    api = TwitterPull(screen_name=args.screen_name, overwrite=args.overwrite)
-    tweets = api.etl(to_date=args.to_date)
+    api = TwitterPull(screen_name=args.screen_name)
+    tweets = api.etl(to_date=args.to_date, overwrite=args.overwrite)
     df = api.parse_raw_tweets(tweets)
     api.save_parsed(df)
     api.diagnostics(df)
