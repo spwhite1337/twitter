@@ -51,7 +51,7 @@ class ETL(object):
                     label=self.twitter_dev_env,
                     query='from:{}'.format(self.screen_name),
                     toDate=to_date.strftime('%Y%m%d%H%M'),
-                    fromDate=self.min_date,
+                    fromDate=self.min_date.strftime('%Y%m%d%H%M'),
                     maxResults=500
             ).items():
                 tweets.append(status._json)
