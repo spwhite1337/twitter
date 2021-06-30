@@ -46,6 +46,7 @@ class ETL(object):
         while to_date > self.min_date and len(tweets) < self.max_tweets:
             # Iterate over 500 tweet batches
             tweet_times = []
+            import ipdb; ipdb.set_trace()
             for status in tweepy.Cursor(
                     self.api.search_full_archive,
                     label=self.twitter_dev_env,
