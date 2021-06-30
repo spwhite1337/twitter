@@ -80,7 +80,7 @@ class Parser(ETL):
             airport_code = tweet_line_parts[0]
             is_airport_code = bool(re.match('[A-Z]{3}', airport_code))
             # Second part is a time
-            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}\s[ap]m [A-Z]{2}', tweet_line_parts[1])
+            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}\s?[ap]m [A-Z]{2}', tweet_line_parts[1])
             return is_airport_code and is_time
         else:
             return False
@@ -116,7 +116,22 @@ class Parser(ETL):
         if version == 'v1':
             tweet_line_parts = [t.strip() for t in tweet_line.split('|')]
             tail_no, routing_no, aircraft_type = None, None, None
-            for tweet_line_part in tweet_line_parts:
+            for idx, tweet_line_part in enumerate(tweet_line_parts):
+                # Capture the international tail-nos
+                if tweet_line_part in [
+                    'TF-FIO', 'CGBIK', 'CGJVX', 'F-HNCO', 'CFYKR', 'C-GBIK', 'C-GBHN', 'C-GJWI', 'C-FYKR',
+                    'C-GBIA', 'C-FGJI',
+                ]:
+                    tail_no = tweet_line_part
+                    continue
+                # Capture the canadian ones
+                if idx in [0, 1] and re.match('^C-?[A-Z]{4}', tweet_line_part):
+                    tail_no = tweet_line_part
+                    continue
+                # Capture the mexican ones
+                if idx == 0 and re.match('^XA-[A-Z]{3}', tweet_line_part):
+                    tail_no = tweet_line_part
+                    continue
                 # If it starts with N and has at least one number, and more than 3 characters it is a tail_no
                 # https://en.wikipedia.org/wiki/Aircraft_registration
                 if tweet_line_part.startswith('N') and \
@@ -191,7 +206,28 @@ class Parser(ETL):
                     result.update(self._aircraft_format(version, tweet_line))
                     continue
 
-        return result
+            # Convert the "first" airport code / time to "Departure" and last to "arrival"
+            if len(result) > 0:
+                airport_codes = [int(a[0]) for a in result.keys() if 'airport_code' in a]
+                if len(airport_codes) == 0:
+                    return result
+                min_code, max_code = min(airport_codes), max(airport_codes)
+                result['departure'] = result[str(min_code) + '_airport_code']
+                result['departure_time'] = result[str(min_code) + '_airport_time']
+                result['arrival'] = result[str(max_code) + '_airport_code']
+                result['arrival_time'] = result[str(max_code) + '_airport_time']
+
+                # Drop intermediate codes
+                drops = []
+                for key in result.keys():
+                    if 'airport_code' in key or 'airport_time' in key:
+                        drops.append(key)
+                for drop in drops:
+                    result.pop(drop)
+            return result
+
+        else:
+            return {}
 
     def parse_raw_tweets(self, tweets: Optional[List[Dict[str, Any]]] = None) -> pd.DataFrame:
         """
@@ -233,13 +269,25 @@ class Parser(ETL):
                     'created_at': row['created_at'],
                     'tweet_date': row['tweet_date'],
                     'tweet': row['tweet'],
-                    'user_mentions': row['user_mentions'],
-                    'team_names': row['team_names'],
-                    'flightware_links': row['flightware_links'],
+                    'user_mention': row['user_mentions'],
+                    'team_name': row['team_names'],
+                    'flightware_link': row['flightware_links'],
                     'p_version': p_version
                 }
                 results = self._parse_tweet(p_version, row['tweet'])
                 record.update(results)
                 records.append(record)
         df = pd.DataFrame.from_records(records).drop_duplicates().reset_index(drop=True)
+
+        # If it is fully parsed it should have a team-name, link, tail_no, aircraft_type, departure, arrival
+        df['parsed'] = ~df[[
+            'team_name',
+            'flightware_link',
+            'aircraft_type',
+            'tail_no',
+            'departure',
+            'arrival',
+            'departure_time',
+            'arrival_time'
+        ]].isna().any(axis=1)
         return df

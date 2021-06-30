@@ -16,7 +16,7 @@ class Diagnostics(Parser):
         """
         Quick plots of the results
         """
-        df['dt'], df['year'] = df['created_at'].dt.date, df['created_at'].dt.year
+        df['year'] = df['created_at'].dt.year
 
         logger.info('Diagnostics for Parsing')
         with PdfPages(os.path.join(self.save_dir, 'diagnostics.pdf')) as pdf:
@@ -24,9 +24,15 @@ class Diagnostics(Parser):
             plt.figure(figsize=self.figsize)
             plt.title('Tweets over Time')
             for parsed, df_plot in df.groupby('parsed'):
-                df_plot = df_plot.groupby('dt').agg(num_tweets=('tweet', 'nunique')).reset_index()
-                df_plot = df_plot.sort_values('dt').reset_index(drop=True)
-                plt.plot(df_plot['dt'], df_plot['num_tweets'], label='Parsed: {}'.format(parsed), marker='o', alpha=0.5)
+                df_plot = df_plot.groupby('tweet_date').agg(num_tweets=('tweet', 'nunique')).reset_index()
+                df_plot = df_plot.sort_values('tweet_date').reset_index(drop=True)
+                plt.plot(
+                    df_plot['tweet_date'],
+                    df_plot['num_tweets'],
+                    label='Parsed: {}'.format(parsed),
+                    marker='o',
+                    alpha=0.5
+                )
             plt.grid(True)
             plt.legend()
             plt.ylabel('Number of Tweets')
@@ -35,10 +41,10 @@ class Diagnostics(Parser):
             plt.close()
 
             for year, df_ in df.groupby('year'):
-                df_plot = df_.groupby('team_names').agg(tweet=('created_at', 'nunique')).reset_index()
+                df_plot = df_.groupby('team_name').agg(tweet=('created_at', 'nunique')).reset_index()
                 df_plot = df_plot.sort_values('tweet', ascending=False).reset_index().head(50)
                 plt.figure(figsize=self.figsize)
-                plt.bar(df_plot['team_names'], df_plot['tweet'])
+                plt.bar(df_plot['team_name'], df_plot['tweet'])
                 plt.xticks(rotation=90)
                 plt.grid(True)
                 plt.title('Team Mentions in {}'.format(year))

@@ -21,11 +21,16 @@ class ETL(object):
 
     def __init__(self, screen_name: str):
         self.screen_name = screen_name
-        auth = tweepy.OAuthHandler(os.environ['consumer_key'], os.environ['consumer_secret'])
-        auth.set_access_token(os.environ['access_token_key'], os.environ['access_token_secret'])
-        self.api = tweepy.API(auth)
-        if not self.api.verify_credentials():
-            logger.info('Could not Validate Credentials')
+        try:
+            auth = tweepy.OAuthHandler(os.environ.get('consumer_key', 'none'), os.environ.get('consumer_secret', 'none'))
+            auth.set_access_token(os.environ.get('access_token_key', 'none'), os.environ.get('access_token_secret', 'none'))
+            self.api = tweepy.API(auth)
+            if not self.api.verify_credentials():
+                logger.info('Could not Validate Credentials')
+        except:
+            logger.info('API Connect failed')
+            self.api = None
+
         self.save_dir = os.path.join(Config.DATA_DIR, self.screen_name)
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
