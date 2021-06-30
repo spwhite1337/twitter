@@ -80,12 +80,8 @@ class ETL(object):
         Save parsed tweets
         """
         logger.info('Saving Parsed Tweets')
-        df_nones = df[
-            (df['flightware_links'] == 'None') | (df['team_names'] != 'None')
-        ]
-        df = df[
-            (df['flightware_links'] != 'None') & (df['team_names'] != 'None')
-        ]
+        df_nones = df[df['is_reply'] | df['is_quote_status']]
+        df = df[~df['is_replay'] & ~df['is_quote_status']]
         df_unparsed = df[~df['parsed']].drop('parsed', axis=1)
         df = df[df['parsed']].drop('parsed', axis=1)
         df = df.sort_values('created_at')

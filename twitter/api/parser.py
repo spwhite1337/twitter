@@ -148,7 +148,9 @@ class Parser(ETL):
             'team_names': [self._get_team_names(tweet) for tweet in tweets],
             'flightware_links': [self._get_flightware_links(tweet) for tweet in tweets],
             'retweets': [tweet['retweet_count'] for tweet in tweets],
-            'favorite_count': [tweet['favorite_count'] for tweet in tweets]
+            'favorite_count': [tweet['favorite_count'] for tweet in tweets],
+            'is_reply': [tweet['in_reply_to_user_id'] is not None for tweet in tweets],
+            'is_quote_status': [tweet['is_quote_status'] for tweet in tweets]
         })
 
         # Define parsing versions
@@ -177,6 +179,10 @@ class Parser(ETL):
             df['arrival'] != 'None'
         ) & (
             df['arrival_time'] != 'None'
+        ) & (
+            ~df['is_reply']
+        ) & (
+            ~df['is_quote_status']
         )
 
         return df.drop_duplicates().reset_index(drop=True)

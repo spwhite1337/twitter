@@ -16,8 +16,6 @@ class Diagnostics(Parser):
         """
         Quick plots of the results
         """
-        # Drop those without links as they are all retweets / replies
-        df = df[(df['flightware_links'] != 'None') & (df['team_names'] != 'None')].copy()
         df['dt'], df['year'] = df['created_at'].dt.date, df['created_at'].dt.year
 
         logger.info('Diagnostics for Parsing')
