@@ -38,7 +38,7 @@ class Parser(ETL):
 
     @staticmethod
     def _parsing_versions(created_at: pd.Timestamp) -> str:
-        if created_at > pd.Timestamp('2021-01-03 00:00:00'):
+        if created_at > pd.Timestamp('2017-01-03 00:00:00'):
             return 'v1'
         else:
             return 'v2'
@@ -80,7 +80,7 @@ class Parser(ETL):
             airport_code = tweet_line_parts[0]
             is_airport_code = bool(re.match('[A-Z]{3}', airport_code))
             # Second part is a time
-            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}\s?[ap]m [A-Z]{2}', tweet_line_parts[1])
+            is_time = re.match(r'^[0-9]{1,2}:[0-9]{2}\s?[ap]m [A-Z0-9+]{2,3}', tweet_line_parts[1])
             return is_airport_code and is_time
         else:
             return False
@@ -95,6 +95,23 @@ class Parser(ETL):
             }
         else:
             return {}
+
+    @staticmethod
+    def _is_old_airport_format(tweet_line: str) -> bool:
+        tweet_line_parts = [t.strip() for t in tweet_line.split(' ') if t.strip() != '']
+        if len(tweet_line_parts) == 2 and all([re.match('[A-Z]{3}', t.strip()) for t in tweet_line_parts]):
+            return True
+        else:
+            return False
+
+    @staticmethod
+    def _old_airport_format(tweet_line: str) -> Dict[str, str]:
+        tweet_line_parts = [t.strip() for t in tweet_line.split(' ') if t.strip() != '']
+        # import ipdb; ipdb.set_trace()
+        return {
+            'OLD_0_airport_code': tweet_line_parts[0],
+            'OLD_1_airport_code': tweet_line_parts[1]
+        }
 
     @staticmethod
     def _is_aircraft_format(version: str, tweet_line: str) -> bool:
@@ -201,28 +218,36 @@ class Parser(ETL):
                     result.update(self._airport_format(version, ldx, tweet_line))
                     continue
 
+                # Older airport format
+                if self._is_old_airport_format(tweet_line):
+                    result.update(self._old_airport_format(tweet_line))
+                    continue
+
                 # Aircraft line for routing_no, aircraft_type, and tail_no
                 if self._is_aircraft_format(version, tweet_line):
                     result.update(self._aircraft_format(version, tweet_line))
                     continue
 
-            # Convert the "first" airport code / time to "Departure" and last to "arrival"
+            # Parse intermediate keys for airports / times for ordinal deparatures / layovers / arrivals
             if len(result) > 0:
-                airport_codes = [int(a[0]) for a in result.keys() if 'airport_code' in a]
-                if len(airport_codes) == 0:
-                    return result
-                min_code, max_code = min(airport_codes), max(airport_codes)
-                result['departure'] = result[str(min_code) + '_airport_code']
-                result['departure_time'] = result[str(min_code) + '_airport_time']
-                result['arrival'] = result[str(max_code) + '_airport_code']
-                result['arrival_time'] = result[str(max_code) + '_airport_time']
+                # Convert the "first" airport code / time to "Departure" and last to "arrival"
+                airport_codes = [int(a[0]) for a in result.keys() if re.match('[0-9]_airport_code', a)]
+                if len(airport_codes) > 0:
+                    min_code, max_code = min(airport_codes), max(airport_codes)
+                    result['departure'] = result[str(min_code) + '_airport_code']
+                    result['departure_time'] = result[str(min_code) + '_airport_time']
+                    result['arrival'] = result[str(max_code) + '_airport_code']
+                    result['arrival_time'] = result[str(max_code) + '_airport_time']
 
-                # Add a layover if there are 3 entries for airport-codes / times
-                if max_code - min_code == 3:
-                    result['layover'] = result['{}_airport_code'.format(max_code - 1)]
-                    result['layover_time'] = result['{}_airport_time'.format(max_code - 1)]
+                    # Add a layover if there are 3 entries for airport-codes / times
+                    if max_code - min_code == 3:
+                        result['layover'] = result['{}_airport_code'.format(max_code - 1)]
+                        result['layover_time'] = result['{}_airport_time'.format(max_code - 1)]
+                elif 'OLD_0_airport_code' in result.keys() and 'OLD_1_airport_code' in result.keys():
+                    result['departure'] = result['OLD_0_airport_code']
+                    result['arrival'] = result['OLD_1_airport_code']
 
-                # Drop intermediate codes
+                # Drop intermediate keys
                 drops = []
                 for key in result.keys():
                     if 'airport_code' in key or 'airport_time' in key:
