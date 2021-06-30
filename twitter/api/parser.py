@@ -310,11 +310,16 @@ class Parser(ETL):
         df = pd.DataFrame.from_records(records).drop_duplicates().reset_index(drop=True)
 
         # If it is fully parsed it should have a team-name, link, tail_no, aircraft_type, departure, arrival
-        df['parsed'] = ~df[[
-            'team_name',
-            'flightware_link',
+        df['parsed'] = (df['team_name'] != 'None') & (df['flightware_link'] != 'None') & ~df[[
             'aircraft_type',
             'tail_no',
+            'departure',
+            'arrival',
+        ]].isna().any(axis=1)
+        df['parsed_w_routing_no'] = (df['team_name'] != 'None') & (df['flightware_link'] != 'None') & ~df[[
+            'aircraft_type',
+            'tail_no',
+            'routing_no',
             'departure',
             'arrival',
         ]].isna().any(axis=1)
