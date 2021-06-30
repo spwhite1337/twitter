@@ -85,3 +85,4 @@ class ETL(object):
         df_nones.to_csv(os.path.join(self.save_dir, 'nones_{}.csv'.format(self.version)), index=False)
         df.to_csv(os.path.join(self.save_dir, 'parsed_tweets_{}.csv'.format(self.version)), index=False)
         df.to_excel(os.path.join(self.save_dir, 'parsed_tweets_{}.xlsx'.format(self.version)), index=False)
+
