@@ -46,20 +46,19 @@ class ETL(object):
         while to_date > self.min_date and len(tweets) < self.max_tweets:
             # Iterate over 500 tweet batches
             tweet_times = []
-            import ipdb; ipdb.set_trace()
             for status in tweepy.Cursor(
                     self.api.search_full_archive,
                     label=self.twitter_dev_env,
                     query='from:{}'.format(self.screen_name),
                     toDate=to_date.strftime('%Y%m%d%H%M'),
-                    fromDate=self.min_date.strftime('%Y%m%d%H%M'),
+                    # fromDate=self.min_date.strftime('%Y%m%d%H%M'),
                     maxResults=500
             ).items():
                 tweets.append(status._json)
                 tweet_times.append(pd.Timestamp(status._json['created_at']).tz_localize(None))
             if len(tweet_times) == 0:
-                to_date = self.min_date
-                logger.info('No Tweets left')
+                to_date = to_date - pd.Timedelta(days=30)
+                logger.info('No tweets from {} to {}'.format(to_date + pd.Timedelta(days=30), to_date))
             else:
                 to_date = min(tweet_times)
             logger.info('{} Total Tweets back to {}'.format(len(tweets), to_date))
@@ -81,8 +80,16 @@ class ETL(object):
         Save parsed tweets
         """
         logger.info('Saving Parsed Tweets')
-        df_nones = df[(df['team_names'] == 'None') | (df['departure'] == 'None') | (df['arrival'] == 'None')]
-        df = df[(df['team_names'] != 'None') & (df['departure'] != 'None') & (df['arrival'] != 'None')]
+        df_nones = df[
+            (df['team_names'] == 'None') | (df['departure'] == 'None') | (df['arrival'] == 'None') |
+            (df['flight_no'] == 'None')
+        ]
+        df = df[
+            (df['team_names'] != 'None') & (df['departure'] != 'None') & (df['arrival'] != 'None') &
+            (df['flight_no'] != 'None')
+        ]
+        df = df.sort_values('created_at')
+        df_nones = df_nones.sort_values('created_at')
         df_nones.to_csv(os.path.join(self.save_dir, 'nones_{}.csv'.format(self.version)), index=False)
         df.to_csv(os.path.join(self.save_dir, 'parsed_tweets_{}.csv'.format(self.version)), index=False)
         df.to_excel(os.path.join(self.save_dir, 'parsed_tweets_{}.xlsx'.format(self.version)), index=False)
