@@ -35,74 +35,102 @@ class Parser(ETL):
             return 'None'
 
     @staticmethod
-    def _parse_for_tail_number(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 5:
-            flight_info = flight_info[-4][1:]  # Drop emoji in front
-            flight_info = flight_info.split('|')
+    def _parsing_versions(created_at: pd.Timestamp) -> str:
+        if created_at > pd.Timestamp('2021-01-03 00:00:00'):
+            return 'v1'
+        else:
+            return 'v2'
+
+    @staticmethod
+    def _parse_for_tail_number(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
+            if len(flight_info) >= 5:
+                flight_info = flight_info[-4][1:]  # Drop emoji in front
+                flight_info = flight_info.split('|')
+                if len(flight_info) >= 3:
+                    return flight_info[0].strip()[1:]
+            return 'None'
+        else:
+            return 'None'
+
+    @staticmethod
+    def _parse_for_flight_no(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
+            if len(flight_info) >= 5:
+                flight_info = flight_info[-4][1:]  # Drop emoji in front
+                flight_info = flight_info.split('|')
+                if len(flight_info) >= 3:
+                    return flight_info[1].strip()
+            return 'None'
+        else:
+            return 'None'
+
+    @staticmethod
+    def _parse_for_aircraft_type(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
+            if len(flight_info) >= 5:
+                flight_info = flight_info[-4][1:]  # Drop emoji in front
+                flight_info = flight_info.split('|')
+                if len(flight_info) >= 3:
+                    return flight_info[2].strip()
+            return 'None'
+        else:
+            return 'None'
+
+    @staticmethod
+    def _parse_for_departure(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
             if len(flight_info) >= 3:
-                return flight_info[0].strip()[1:]
-        return 'None'
+                flight_info = flight_info[-3][1:]  # Drop emoji in front
+                flight_info = flight_info.split(' - ')
+                if len(flight_info) >= 1:
+                    return flight_info[0].strip()
+            return 'None'
+        else:
+            return 'None'
 
     @staticmethod
-    def _parse_for_flight_no(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 5:
-            flight_info = flight_info[-4][1:]  # Drop emoji in front
-            flight_info = flight_info.split('|')
+    def _parse_for_departure_time(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
             if len(flight_info) >= 3:
-                return flight_info[1].strip()
-        return 'None'
+                flight_info = flight_info[-3][1:]  # Drop emoji in front
+                flight_info = flight_info.split(' - ')
+                if len(flight_info) >= 2:
+                    return flight_info[1].strip()
+            return 'None'
+        else:
+            return 'None'
 
     @staticmethod
-    def _parse_for_aircraft_type(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 5:
-            flight_info = flight_info[-4][1:]  # Drop emoji in front
-            flight_info = flight_info.split('|')
+    def _parse_for_arrival(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
             if len(flight_info) >= 3:
-                return flight_info[2].strip()
-        return 'None'
+                flight_info = flight_info[-2][1:]  # Drop emoji in front
+                flight_info = flight_info.split(' - ')
+                if len(flight_info) >= 1:
+                    return flight_info[0].strip()
+            return 'None'
+        else:
+            return 'None'
 
     @staticmethod
-    def _parse_for_departure(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 3:
-            flight_info = flight_info[-3][1:]  # Drop emoji in front
-            flight_info = flight_info.split(' - ')
-            if len(flight_info) >= 1:
-                return flight_info[0].strip()
-        return 'None'
-
-    @staticmethod
-    def _parse_for_departure_time(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 3:
-            flight_info = flight_info[-3][1:]  # Drop emoji in front
-            flight_info = flight_info.split(' - ')
-            if len(flight_info) >= 2:
-                return flight_info[1].strip()
-        return 'None'
-
-    @staticmethod
-    def _parse_for_arrival(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 3:
-            flight_info = flight_info[-2][1:]  # Drop emoji in front
-            flight_info = flight_info.split(' - ')
-            if len(flight_info) >= 1:
-                return flight_info[0].strip()
-        return 'None'
-
-    @staticmethod
-    def _parse_for_arrival_time(tweet: str) -> str:
-        flight_info = tweet.split('\n')
-        if len(flight_info) >= 3:
-            flight_info = flight_info[-2][1:]  # Drop emoji in front
-            flight_info = flight_info.split(' - ')
-            if len(flight_info) >= 2:
-                return flight_info[1].strip()
-        return 'None'
+    def _parse_for_arrival_time(version: str, tweet: str) -> str:
+        if version == 'v1':
+            flight_info = tweet.split('\n')
+            if len(flight_info) >= 3:
+                flight_info = flight_info[-2][1:]  # Drop emoji in front
+                flight_info = flight_info.split(' - ')
+                if len(flight_info) >= 2:
+                    return flight_info[1].strip()
+            return 'None'
+        else:
+            return 'None'
 
     def parse_raw_tweets(self, tweets: Optional[List[Dict[str, Any]]] = None) -> pd.DataFrame:
         """
@@ -123,13 +151,16 @@ class Parser(ETL):
             'favorite_count': [tweet['favorite_count'] for tweet in tweets]
         })
 
+        # Define parsing versions
+        df['p_version'] = df['created_at'].apply(self._parsing_versions)
+
         # Parse data from tweet
-        df['tail_number'] = df['tweet'].apply(self._parse_for_tail_number)
-        df['flight_no'] = df['tweet'].apply(self._parse_for_flight_no)
-        df['aircraft_type'] = df['tweet'].apply(self._parse_for_aircraft_type)
-        df['departure'] = df['tweet'].apply(self._parse_for_departure)
-        df['departure_time'] = df['tweet'].apply(self._parse_for_departure_time)
-        df['arrival'] = df['tweet'].apply(self._parse_for_arrival)
-        df['arrival_time'] = df['tweet'].apply(self._parse_for_arrival_time)
+        df['tail_number'] = df.apply(lambda r: self._parse_for_tail_number(r['p_version'], r['tweet']), axis=1)
+        df['flight_no'] = df.apply(lambda r: self._parse_for_flight_no(r['p_version'], r['tweet']), axis=1)
+        df['aircraft_type'] = df.apply(lambda r: self._parse_for_aircraft_type(r['p_version'], r['tweet']), axis=1)
+        df['departure'] = df.apply(lambda r: self._parse_for_departure(r['p_version'], r['tweet']), axis=1)
+        df['departure_time'] = df.apply(lambda r: self._parse_for_departure_time(r['p_version'], r['tweet']), axis=1)
+        df['arrival'] = df.apply(lambda r: self._parse_for_arrival(r['p_version'], r['tweet']), axis=1)
+        df['arrival_time'] = df.apply(lambda r: self._parse_for_arrival_time(r['p_version'], r['tweet']), axis=1)
 
         return df.drop_duplicates().reset_index(drop=True)
