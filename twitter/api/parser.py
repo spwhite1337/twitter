@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Tuple, Optional
 import pandas as pd
 
+from twitter.config import logger
 from twitter.api.etl import ETL
 
 
@@ -111,9 +112,10 @@ class Parser(ETL):
             tweets = self.etl()
 
         # Extract data from response object
+        logger.info('Parsing {} Tweets'.format(len(tweets)))
         df = pd.DataFrame({
-            'created_at': [pd.Timestamp(tweet['created_at']) for tweet in tweets],
-            'tweet': [tweet['extended_tweet']['full_text'] for tweet in tweets],
+            'created_at': [pd.Timestamp(tweet['created_at']).tz_localize(None) for tweet in tweets],
+            'tweet': [tweet.get('extended_tweet', {'full_text': tweet['text']})['full_text'] for tweet in tweets],
             'user_mentions': [self._get_user_mentions(tweet) for tweet in tweets],
             'team_names': [self._get_team_names(tweet) for tweet in tweets],
             'flightware_links': [self._get_flightware_links(tweet) for tweet in tweets],
