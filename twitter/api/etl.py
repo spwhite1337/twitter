@@ -3,8 +3,7 @@ import json
 import tweepy
 import datetime
 import pandas as pd
-from typing import List, Dict, Tuple, Any
-from tqdm import tqdm
+from typing import List, Dict, Optional
 from twitter.config import Config, logger
 
 
@@ -12,6 +11,7 @@ class ETL(object):
     """
     Pull data from Twitter
     """
+    version = 'v1'
     twitter_dev_env = 'marcus'
     min_date = pd.Timestamp('2018-01-01')
     max_tweets = 100000
@@ -28,13 +28,19 @@ class ETL(object):
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
 
-    def etl(self) -> List[Dict]:
+    def etl(self, to_date: Optional[str] = None, overwrite: bool = False) -> List[Dict]:
         """
         Pull tweets, save raw, and pull json
         """
+        if os.path.exists(os.path.join(self.save_dir, 'raw_tweets_{}.json'.format(self.version))) and not overwrite:
+            logger.info('Loading Raw Tweets from Cache')
+            with open(os.path.join(self.save_dir, 'raw_tweets_{}.json'.format(self.version)), 'r') as jp:
+                tweets = json.load(jp)
+            return tweets
+
         logger.info('Pulling Tweets for {}'.format(self.screen_name))
         tweets = []
-        to_date = pd.Timestamp(datetime.datetime.now())
+        to_date = pd.Timestamp(datetime.datetime.now()) if to_date is None else to_date
         while to_date > self.min_date and len(tweets) < self.max_tweets:
             # Iterate over 500 tweet batches
             tweet_times = []
@@ -43,6 +49,7 @@ class ETL(object):
                     label=self.twitter_dev_env,
                     query='from:{}'.format(self.screen_name),
                     toDate=to_date.strftime('%Y%m%d%H%M'),
+                    fromDate=self.min_date,
                     maxResults=500
             ).items():
                 tweets.append(status._json)
@@ -54,7 +61,24 @@ class ETL(object):
                 to_date = min(tweet_times)
             logger.info('{} Total Tweets back to {}'.format(len(tweets), to_date))
 
+        # If you set a limit and the old data exists, then append them together
+        if to_date is not None and \
+                os.path.exists(os.path.join(self.save_dir, 'raw_tweets_{}.json'.format(self.version))):
+            logger.info('Appending Old Tweets to New')
+            with open(os.path.join(self.save_dir, 'raw_tweets_{}.json'.format(self.version)), 'r') as jp:
+                old_tweets = json.load(jp)
+            tweets.extend(old_tweets)
         logger.info('Saving Raw Tweets')
-        with open(os.path.join(self.save_dir, 'raw_tweets.json'), 'w') as jp:
+        with open(os.path.join(self.save_dir, 'raw_tweets_{}.json'.format(self.version)), 'w') as jp:
             json.dump(tweets, jp)
         return tweets
+
+    def save_parsed(self, df: pd.DataFrame):
+        """
+        Save parsed tweets
+        """
+        logger.info('Saving Parsed Tweets')
+        df_nones, df = df[df['aircraft_type'] == 'None'], df[df['aircraft_type'] != 'None']
+        df_nones.to_csv(os.path.join(self.save_dir, 'nones_{}.csv'.format(self.version)), index=False)
+        df.to_csv(os.path.join(self.save_dir, 'parsed_tweets_{}.csv'.format(self.version)), index=False)
+        df.to_excel(os.path.join(self.save_dir, 'parsed_tweets_{}.csv'.format(self.version)), index=False)

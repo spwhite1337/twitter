@@ -6,32 +6,6 @@ import pandas as pd
 from typing import List, Dict, Tuple, Any
 
 
-class TwitterPull(object):
-    """
-    Pull data from Twitter
-    """
-
-    def __init__(self, screen_name: str, overwrite: bool = False):
-        self.screen_name = screen_name
-        auth = tweepy.OAuthHandler(os.environ['consumer_key'], os.environ['consumer_secret'])
-        auth.set_access_token(os.environ['access_token_key'], os.environ['access_token_secret'])
-        self.api = tweepy.API(auth)
-        self.overwrite = overwrite
-
-    def etl(self) -> List[Dict]:
-        """
-        Pull tweets, save raw, and pull json
-        """
-        statuses = [
-            status._json for status in tweepy.Cursor(
-                self.api.user_timeline,
-                screen_name=self.screen_name,
-                tweet_mode='extended').items()
-        ]
-
-        return statuses
-
-
 def get_all_tweets(screen_name: str, keys: Dict[str, str]):
     # Twitter only allows access to a users most recent 3240 tweets with this method
     # authorize twitter, initialize tweepy
@@ -165,24 +139,20 @@ def get_all_tweets(screen_name: str, keys: Dict[str, str]):
 
 
 if __name__ == '__main__':
-    api = TwitterPull(screen_name='SportsAviation')
-    api.etl()
+    # Arguments include the user you want to download and the api keys
+    parser = argparse.ArgumentParser(description='Get Twitter data')
+    parser.add_argument('--user', action='store', default='none', type=str, )
+    parser.add_argument('--consumer_key', action='store', default='none', type=str, )
+    parser.add_argument('--consumer_secret', action='store', default='none', type=str, )
+    parser.add_argument('--access_token_key', action='store', default='none', type=str, )
+    parser.add_argument('--access_token_secret', action='store', default='none', type=str, )
+    args = parser.parse_args()
+    # API Keys
+    twitter_keys = {
+        'consumer_key': args.consumer_key,
+        'consumer_secret': args.consumer_secret,
+        'access_token_key': args.access_token_key,
+        'access_token_secret': args.access_token_secret
+    }
 
-# if __name__ == '__main__':
-#     # Arguments include the user you want to download and the api keys
-#     parser = argparse.ArgumentParser(description='Get Twitter data')
-#     parser.add_argument('--user', action='store', default='none', type=str, )
-#     parser.add_argument('--consumer_key', action='store', default='none', type=str, )
-#     parser.add_argument('--consumer_secret', action='store', default='none', type=str, )
-#     parser.add_argument('--access_token_key', action='store', default='none', type=str, )
-#     parser.add_argument('--access_token_secret', action='store', default='none', type=str, )
-#     args = parser.parse_args()
-#     # API Keys
-#     twitter_keys = {
-#         'consumer_key': args.consumer_key,
-#         'consumer_secret': args.consumer_secret,
-#         'access_token_key': args.access_token_key,
-#         'access_token_secret': args.access_token_secret
-#     }
-#
-#     get_all_tweets(args.user, twitter_keys)
+    get_all_tweets(args.user, twitter_keys)

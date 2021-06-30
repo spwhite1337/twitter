@@ -10,4 +10,6 @@ def twitter_pull():
     args = parser.parse_args()
 
     api = TwitterPull(screen_name=args.screen_name, overwrite=args.overwrite)
-    api.etl()
+    tweets = api.etl()
+    df = api.parse_raw_tweets(tweets)
+    api.save_parsed(df)
