@@ -16,20 +16,19 @@ class Diagnostics(Parser):
         """
         Quick plots of the results
         """
-        df['dt'] = df['created_at'].dt.date
-        df['year'] = df['created_at'].dt.year
+        # Drop those without links as they are all retweets / replies
+        df = df[(df['flightware_links'] != 'None') & (df['team_names'] != 'None')].copy()
+        df['dt'], df['year'] = df['created_at'].dt.date, df['created_at'].dt.year
 
         logger.info('Diagnostics for Parsing')
         with PdfPages(os.path.join(self.save_dir, 'diagnostics.pdf')) as pdf:
             # Time series of tweets
             plt.figure(figsize=self.figsize)
             plt.title('Tweets over Time')
-            df_plot = df.groupby('dt').agg(num_tweets=('tweet', 'nunique'), parsed=('parsed', 'max')).reset_index()
-            for parsed, df_plot_ in df_plot.groupby('parsed'):
-                df_plot_ = df_plot_.sort_values('dt').reset_index(drop=True)
-                plt.plot(
-                    df_plot_['dt'], df_plot_['num_tweets'], label='Parsed: {}'.format(parsed), marker='o', alpha=0.5
-                )
+            for parsed, df_plot in df.groupby('parsed'):
+                df_plot = df_plot.groupby('dt').agg(num_tweets=('tweet', 'nunique')).reset_index()
+                df_plot = df_plot.sort_values('dt').reset_index(drop=True)
+                plt.plot(df_plot['dt'], df_plot['num_tweets'], label='Parsed: {}'.format(parsed), marker='o', alpha=0.5)
             plt.grid(True)
             plt.legend()
             plt.ylabel('Number of Tweets')
