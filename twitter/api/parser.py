@@ -163,4 +163,20 @@ class Parser(ETL):
         df['arrival'] = df.apply(lambda r: self._parse_for_arrival(r['p_version'], r['tweet']), axis=1)
         df['arrival_time'] = df.apply(lambda r: self._parse_for_arrival_time(r['p_version'], r['tweet']), axis=1)
 
+        df['parsed'] = (
+            df['tail_number'] != 'None'
+        ) & (
+            df['flight_no'] != 'None'
+        ) & (
+            df['aircraft_type'] != 'None'
+        ) & (
+            df['departure'] != 'None'
+        ) & (
+            df['departure_time'] != 'None'
+        ) & (
+            df['arrival'] != 'None'
+        ) & (
+            df['arrival_time'] != 'None'
+        )
+
         return df.drop_duplicates().reset_index(drop=True)

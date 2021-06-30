@@ -16,8 +16,6 @@ class Diagnostics(Parser):
         """
         Quick plots of the results
         """
-        df['parsed'] = (df['team_names'] != 'None') & (df['departure'] != 'None') & (df['arrival'] != 'None') & \
-                       (df['flight_no'] != 'None')
         df['dt'] = df['created_at'].dt.date
         df['year'] = df['created_at'].dt.year
 
