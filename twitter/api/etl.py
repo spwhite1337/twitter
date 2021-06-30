@@ -80,8 +80,8 @@ class ETL(object):
         Save parsed tweets
         """
         logger.info('Saving Parsed Tweets')
-        df_nones = df[~df['parsed']]
-        df = df[df['parsed']]
+        df_nones = df[~df['parsed']].drop('parsed', axis=1)
+        df = df[df['parsed']].drop('parsed', axis=1)
         df = df.sort_values('created_at')
         df_nones = df_nones.sort_values('created_at')
         df_nones.to_csv(os.path.join(self.save_dir, 'nones_{}.csv'.format(self.version)), index=False)
