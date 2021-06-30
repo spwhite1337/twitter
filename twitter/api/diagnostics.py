@@ -44,7 +44,7 @@ class Diagnostics(Parser):
 
             for year, df_ in df.groupby('year'):
                 df_plot = df_.groupby('team_name').agg(tweet=('created_at', 'nunique')).reset_index()
-                df_plot = df_plot.sort_values('tweet', ascending=False).reset_index().head(50)
+                df_plot = df_plot.sort_values('tweet', ascending=True).reset_index().tail(50)
                 plt.figure(figsize=self.figsize)
                 plt.barh(df_plot['team_name'], df_plot['tweet'])
                 plt.xticks(rotation=90)
@@ -56,7 +56,7 @@ class Diagnostics(Parser):
                 plt.close()
 
                 df_plot = df_.groupby('departure').agg(tweet=('created_at', 'nunique')).reset_index()
-                df_plot = df_plot.sort_values('tweet', ascending=True).reset_index().head(50)
+                df_plot = df_plot.sort_values('tweet', ascending=True).reset_index().tail(50)
                 plt.figure(figsize=self.figsize)
                 plt.barh(df_plot['departure'], df_plot['tweet'])
                 plt.xticks(rotation=90)
@@ -68,7 +68,7 @@ class Diagnostics(Parser):
                 plt.close()
 
                 df_plot = df_.groupby('arrival').agg(tweet=('created_at', 'nunique')).reset_index()
-                df_plot = df_plot.sort_values('tweet', ascending=True).reset_index().head(50)
+                df_plot = df_plot.sort_values('tweet', ascending=True).reset_index().tail(50)
                 plt.figure(figsize=self.figsize)
                 plt.barh(df_plot['arrival'], df_plot['tweet'])
                 plt.xticks(rotation=90)
