@@ -113,7 +113,7 @@ class Parser(ETL):
         # Extract data from response object
         df = pd.DataFrame({
             'created_at': [pd.Timestamp(tweet['created_at']) for tweet in tweets],
-            'tweet': [tweet['full_text'] for tweet in tweets],
+            'tweet': [tweet['extended_tweet']['full_text'] for tweet in tweets],
             'user_mentions': [self._get_user_mentions(tweet) for tweet in tweets],
             'team_names': [self._get_team_names(tweet) for tweet in tweets],
             'flightware_links': [self._get_flightware_links(tweet) for tweet in tweets],
